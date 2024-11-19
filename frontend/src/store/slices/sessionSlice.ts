@@ -48,40 +48,75 @@ export const getAllSessions = createAsyncThunk("session/all", async () => {
 // Get all sessions for a class
 export const getClassSessions = createAsyncThunk(
     "session/getClassSessions",
-    async (classId: string) => {
-        const response = await axios.get(`/sessions/class/${classId}/sessions`);
-        return response.data;
+    async (classId: string, { rejectWithValue }) => {
+        try {
+            const response = await axios.get(
+                `/sessions/class/${classId}/sessions`
+            );
+            return response.data;
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response) {
+                return rejectWithValue(err.response.data);
+            }
+            throw err;
+        }
     }
 );
 
 // Create a new session
 export const createSession = createAsyncThunk(
     "session/create",
-    async (sessionData: {
-        title: string;
-        description?: string;
-        classId: string;
-    }) => {
-        const response = await axios.post("/sessions/session", sessionData);
-        return response.data;
+    async (
+        sessionData: {
+            title: string;
+            description?: string;
+            classId: string;
+        },
+        { rejectWithValue }
+    ) => {
+        try {
+            const response = await axios.post("/sessions/session", sessionData);
+            return response.data;
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response) {
+                return rejectWithValue(err.response.data);
+            }
+            throw err;
+        }
     }
 );
 
 // Get session details
 export const getSession = createAsyncThunk(
     "session/getSession",
-    async (sessionId: string) => {
-        const response = await axios.get(`/sessions/session/${sessionId}`);
-        return response.data;
+    async (sessionId: string, { rejectWithValue }) => {
+        try {
+            const response = await axios.get(`/sessions/session/${sessionId}`);
+            return response.data;
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response) {
+                return rejectWithValue(err.response.data);
+            }
+            throw err;
+        }
     }
 );
 
 // End session
 export const endSession = createAsyncThunk(
     "session/endSession",
-    async (sessionId: string) => {
-        const response = await axios.post(`/sessions/session/${sessionId}/end`);
-        return response.data;
+    async (sessionId: string, { rejectWithValue }) => {
+        try {
+            const response = await axios.post(
+                `/sessions/session/${sessionId}/end`
+            );
+            return response.data;
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response) {
+                return rejectWithValue(err.response.data);
+            }
+            throw err;
+        }
     }
 );
 

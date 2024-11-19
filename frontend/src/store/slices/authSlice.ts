@@ -27,6 +27,11 @@ const initialState: AuthState = {
     error: null,
 };
 
+interface UpdatePasswordPayload {
+    currentPassword: string;
+    newPassword: string;
+}
+
 // Set up axios defaults
 axios.defaults.baseURL =
     import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -114,6 +119,36 @@ export const logout = createAsyncThunk(
     }
 );
 
+export const updateProfile = createAsyncThunk(
+    "auth/updateProfile",
+    async (userData: { name: string; email: string }, { rejectWithValue }) => {
+        try {
+            const response = await axios.put("/users/profile", userData);
+            return response.data;
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response) {
+                return rejectWithValue(err.response.data);
+            }
+            throw err;
+        }
+    }
+);
+
+export const updatePassword = createAsyncThunk(
+    "auth/updatePassword",
+    async (passwords: UpdatePasswordPayload, { rejectWithValue }) => {
+        try {
+            const response = await axios.put("/users/password", passwords);
+            return response.data;
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response) {
+                return rejectWithValue(err.response.data);
+            }
+            throw err;
+        }
+    }
+);
+
 const authSlice = createSlice({
     name: "auth",
     initialState,
@@ -182,6 +217,35 @@ const authSlice = createSlice({
                 state.token = null;
                 state.isAuthenticated = false;
                 state.error = null;
+            })
+            .addCase(updateProfile.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(updateProfile.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.user = action.payload;
+                state.error = null;
+            })
+            .addCase(updateProfile.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error =
+                    (action.payload as { error: string })?.error ||
+                    "Failed to update profile";
+            })
+            .addCase(updatePassword.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(updatePassword.fulfilled, (state) => {
+                state.isLoading = false;
+                state.error = null;
+            })
+            .addCase(updatePassword.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error =
+                    (action.payload as { error: string })?.error ||
+                    "Failed to update password";
             });
     },
 });

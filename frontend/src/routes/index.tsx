@@ -7,6 +7,7 @@ import { SessionDetails } from "@/components/Dashboard/SessionDetails";
 import { ProtectedRoute } from "@/components/Auth/ProtectedRoute";
 import { Whiteboard } from "@/components/Whiteboard/Whiteboard";
 import { MainLayout } from "@/components/MainLayout";
+import ProfilePage from "@/pages/ProfilePage";
 
 export function AppRoutes() {
     return (
@@ -28,6 +29,7 @@ export function AppRoutes() {
                 <Route path="class/:id" element={<ClassDetails />} />
                 <Route path="session/:id" element={<SessionDetails />} />
                 <Route path="session/:id/whiteboard" element={<Whiteboard />} />
+                <Route path="profile" element={<ProfilePage />} />
                 {/* Redirect unmatched routes */}
                 <Route
                     path="*"
