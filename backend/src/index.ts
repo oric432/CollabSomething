@@ -35,13 +35,14 @@ wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
 
         // Verify token and get user
         const user = await verifyToken(token);
+        console.log("User", user);
         if (!user) {
             ws.close(1008, "Invalid authentication");
             return;
         }
 
         // Add client to session
-        webSocketService.addClient(sessionId, user.id, ws);
+        webSocketService.addClient(sessionId, user.userId, ws);
 
         // Handle incoming messages
         ws.on("message", async (message: string) => {
@@ -49,7 +50,7 @@ wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
                 const action = JSON.parse(message);
                 await webSocketService.handleMessage({
                     ...action,
-                    userId: user.id,
+                    userId: user.userId,
                     timestamp: Date.now(),
                     sessionId,
                 });
@@ -60,7 +61,7 @@ wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
 
         // Handle disconnection
         ws.on("close", () => {
-            webSocketService.removeClient(sessionId, user.id);
+            webSocketService.removeClient(sessionId, user.userId);
         });
     } catch (error) {
         console.error("WebSocket connection error:", error);

@@ -10,8 +10,13 @@ import {
 
 const prisma = new PrismaClient();
 
+interface SessionClient {
+    userId: string;
+    ws: WebSocket;
+}
+
 export class WebSocketService {
-    private sessions: Map<string, Map<string, WebSocket>>;
+    private sessions: Map<string, SessionClient[]>;
     private sequenceNumbers: Map<string, number>;
     private sessionStates: Map<string, any>;
     private lastSaveTime: Map<string, number>;
@@ -24,24 +29,38 @@ export class WebSocketService {
     }
 
     public addClient(sessionId: string, userId: string, ws: WebSocket) {
+        console.log("Adding client to session", sessionId, userId);
         if (!this.sessions.has(sessionId)) {
-            this.sessions.set(sessionId, new Map());
+            this.sessions.set(sessionId, []);
             this.sequenceNumbers.set(sessionId, 0);
             this.sessionStates.set(sessionId, null);
             this.lastSaveTime.set(sessionId, Date.now());
         }
-        this.sessions.get(sessionId)?.set(userId, ws);
+
+        const session = this.sessions.get(sessionId)!;
+        session.push({ userId, ws });
+
+        // Broadcast updated user list to all clients in this session
+        this.broadcastSessionUsers(sessionId);
     }
 
     removeClient(sessionId: string, userId: string) {
-        this.sessions.get(sessionId)?.delete(userId);
-        if (this.sessions.get(sessionId)?.size === 0) {
-            // Save state one last time before cleanup
-            this.persistState(sessionId);
+        const session = this.sessions.get(sessionId);
+        if (!session) return;
+
+        const index = session.findIndex((client) => client.userId === userId);
+        if (index !== -1) {
+            session.splice(index, 1);
+        }
+
+        if (session.length === 0) {
             this.sessions.delete(sessionId);
             this.sequenceNumbers.delete(sessionId);
             this.sessionStates.delete(sessionId);
             this.lastSaveTime.delete(sessionId);
+        } else {
+            // Broadcast updated user list to remaining clients
+            this.broadcastSessionUsers(sessionId);
         }
     }
 
@@ -58,6 +77,7 @@ export class WebSocketService {
                     thumbnail: currentState.thumbnail,
                 },
             });
+            console.log("State persisted for session", sessionId);
             this.lastSaveTime.set(sessionId, Date.now());
         } catch (error) {
             console.error("State persistence error:", error);
@@ -108,7 +128,7 @@ export class WebSocketService {
 
     private async handleSync(message: SyncRequestMessage) {
         const state = await this.getCurrentState(message.sessionId);
-        const ws = this.sessions.get(message.sessionId)?.get(message.userId);
+        const ws = this.sessions.get(message.sessionId)?.at(1)?.ws;
 
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(
@@ -158,7 +178,7 @@ export class WebSocketService {
         return (
             action.type === "clear" ||
             timeSinceLastSave >= 5000 ||
-            this.sessions.get(action.sessionId)?.size === 0
+            this.sessions.get(action.sessionId)?.length === 0
         );
     }
 
@@ -171,12 +191,12 @@ export class WebSocketService {
         const sessionClients = this.sessions.get(sessionId);
         if (sessionClients) {
             const messageStr = JSON.stringify(message);
-            sessionClients.forEach((client, userId) => {
+            sessionClients.forEach((client, _) => {
                 if (
-                    userId !== message.userId &&
-                    client.readyState === WebSocket.OPEN
+                    client.userId !== message.userId &&
+                    client.ws.readyState === WebSocket.OPEN
                 ) {
-                    client.send(messageStr);
+                    client.ws.send(messageStr);
                 }
             });
         }
@@ -200,5 +220,24 @@ export class WebSocketService {
         }
 
         return state;
+    }
+
+    private broadcastSessionUsers(sessionId: string) {
+        const session = this.sessions.get(sessionId);
+        if (!session) return;
+
+        const userIds = session.map((client) => client.userId);
+        const message = JSON.stringify({
+            type: "SESSION_USERS_UPDATE",
+            sessionId,
+            users: userIds,
+        });
+
+        // Broadcast to all clients in the session
+        session.forEach((client) => {
+            if (client.ws.readyState === WebSocket.OPEN) {
+                client.ws.send(message);
+            }
+        });
     }
 }
