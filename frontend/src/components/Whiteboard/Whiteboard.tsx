@@ -11,13 +11,13 @@ import { WhiteboardSession } from "./WhiteboardSession";
 
 export function Whiteboard() {
     const { id } = useParams<{ id: string }>();
-    const dispatch = useDispatch<AppDispatch>();
+    const dispatch = useDispatch<AppDispatch>();  
     const store = useSyncDemo({ roomId: id || "" });
     const { currentSession, isLoading } = useSelector(
         (state: RootState) => state.session
     );
 
-    const token = useSelector((state: RootState) => state.auth.token);
+    const user = useSelector((state: RootState) => state.auth);
 
     useEffect(() => {
         if (id) {
@@ -41,16 +41,13 @@ export function Whiteboard() {
                     <CardHeader>
                         <CardTitle>Whiteboard</CardTitle>
                     </CardHeader>
-                    <CardContent className="w-full h-[calc(100vh-250px)] min-h-[700px]">
+                    <CardContent className="h-[calc(100vh-300px)] min-h-[700px]">
                         <Tldraw store={store} />
                     </CardContent>
                 </Card>
 
                 <div className="w-[250px]">
-                    <WhiteboardSession
-                        sessionId={id || ""}
-                        token={token || ""}
-                    />
+                    <WhiteboardSession sessionId={id || ""} user={user || ""} />
                 </div>
             </div>
         </div>

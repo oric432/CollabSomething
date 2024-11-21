@@ -5,6 +5,7 @@ export const generateToken = (user: SafeUser): string => {
     return jwt.sign(
         {
             userId: user.id,
+            name: user.name,
             email: user.email,
         },
         process.env.JWT_SECRET as string,
@@ -18,6 +19,7 @@ export const generateRefreshToken = (user: SafeUser): string => {
     return jwt.sign(
         {
             userId: user.id,
+            name: user.name,
             tokenVersion: user.tokenVersion,
         },
         process.env.JWT_REFRESH_SECRET as string,

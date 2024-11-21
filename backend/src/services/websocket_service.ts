@@ -7,11 +7,12 @@ import {
     StateUpdateMessage,
     SyncRequestMessage,
 } from "../types/websocket";
+import { JwtPayload } from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
 interface SessionClient {
-    userId: string;
+    user: JwtPayload;
     ws: WebSocket;
 }
 
@@ -28,8 +29,8 @@ export class WebSocketService {
         this.lastSaveTime = new Map();
     }
 
-    public addClient(sessionId: string, userId: string, ws: WebSocket) {
-        console.log("Adding client to session", sessionId, userId);
+    public addClient(sessionId: string, user: JwtPayload, ws: WebSocket) {
+        console.log("Adding client to session", sessionId, user);
         if (!this.sessions.has(sessionId)) {
             this.sessions.set(sessionId, []);
             this.sequenceNumbers.set(sessionId, 0);
@@ -38,7 +39,7 @@ export class WebSocketService {
         }
 
         const session = this.sessions.get(sessionId)!;
-        session.push({ userId, ws });
+        session.push({ user, ws });
 
         // Broadcast updated user list to all clients in this session
         this.broadcastSessionUsers(sessionId);
@@ -48,7 +49,9 @@ export class WebSocketService {
         const session = this.sessions.get(sessionId);
         if (!session) return;
 
-        const index = session.findIndex((client) => client.userId === userId);
+        const index = session.findIndex(
+            (client) => client.user.userId === userId
+        );
         if (index !== -1) {
             session.splice(index, 1);
         }
@@ -193,7 +196,7 @@ export class WebSocketService {
             const messageStr = JSON.stringify(message);
             sessionClients.forEach((client, _) => {
                 if (
-                    client.userId !== message.userId &&
+                    client.user.userId !== message.userId &&
                     client.ws.readyState === WebSocket.OPEN
                 ) {
                     client.ws.send(messageStr);
@@ -226,11 +229,11 @@ export class WebSocketService {
         const session = this.sessions.get(sessionId);
         if (!session) return;
 
-        const userIds = session.map((client) => client.userId);
+        const users = session.map((client) => client.user);
         const message = JSON.stringify({
             type: "SESSION_USERS_UPDATE",
             sessionId,
-            users: userIds,
+            users,
         });
 
         // Broadcast to all clients in the session

@@ -1,28 +1,34 @@
 import { useEffect, useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp } from "lucide-react"; // Make sure to install lucide-react
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { AuthState } from "@/store/slices/authSlice";
 
 interface WhiteboardSessionProps {
     sessionId: string;
-    token: string;
+    user: AuthState;
 }
 
-export function WhiteboardSession({
-    sessionId,
-    token,
-}: WhiteboardSessionProps) {
-    const [users, setUsers] = useState<string[]>([]);
+interface JwtPayload {
+    userId: string;
+    name: string;
+    email: string;
+    iat: number;
+    exp: number;
+}
+
+export function WhiteboardSession({ sessionId, user }: WhiteboardSessionProps) {
+    const [users, setUsers] = useState<JwtPayload[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [, setWs] = useState<WebSocket | null>(null);
 
     useEffect(() => {
-        const wsUrl = `ws://localhost:3000?token=${token}&sessionId=${sessionId}`;
+        const wsUrl = `ws://localhost:3000?token=${user.token}&sessionId=${sessionId}`;
         const websocket = new WebSocket(wsUrl);
 
         websocket.onmessage = (event) => {
@@ -37,7 +43,7 @@ export function WhiteboardSession({
         return () => {
             websocket.close();
         };
-    }, [sessionId, token]);
+    }, [sessionId, user]);
 
     return (
         <Card className="sticky top-4">
@@ -49,16 +55,17 @@ export function WhiteboardSession({
                 <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-gray-50 rounded-t-lg">
                     <div className="flex items-center gap-2 min-w-0">
                         <div className="flex -space-x-2 flex-shrink-0">
-                            {users.slice(0, 3).map((user, index) => (
+                            {users.slice(0, 3).map((client, index) => (
                                 <Avatar
                                     key={index}
                                     className="w-6 h-6 border-2 border-white"
                                 >
-                                    <AvatarImage
-                                        src={`https://avatar.vercel.sh/${user}.png`}
-                                    />
                                     <AvatarFallback>
-                                        {user.charAt(0).toUpperCase()}
+                                        {client.name
+                                            .split(" ")
+                                            .map((part: string) =>
+                                                part.charAt(0).toUpperCase()
+                                            )}
                                     </AvatarFallback>
                                 </Avatar>
                             ))}
@@ -82,20 +89,23 @@ export function WhiteboardSession({
 
                 <CollapsibleContent className="overflow-hidden">
                     <div className="p-2 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
-                        {users.map((user, index) => (
+                        {users.map((client, index) => (
                             <div
                                 key={index}
                                 className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md"
                             >
                                 <Avatar className="w-8 h-8 flex-shrink-0">
-                                    <AvatarImage
-                                        src={`https://avatar.vercel.sh/${user}.png`}
-                                    />
                                     <AvatarFallback>
-                                        {user.charAt(0).toUpperCase()}
+                                        {client.name
+                                            .split(" ")
+                                            .map((part: string) =>
+                                                part.charAt(0).toUpperCase()
+                                            )}
                                     </AvatarFallback>
                                 </Avatar>
-                                <span className="text-sm truncate">{user}</span>
+                                <span className="text-sm truncate">
+                                    {client.name}
+                                </span>
                             </div>
                         ))}
                     </div>
